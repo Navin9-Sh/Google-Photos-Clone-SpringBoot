@@ -66,6 +66,12 @@
             <scope>compile</scope>
         </dependency>
 
+        <dependency>
+            <groupId>io.imagekit</groupId>
+            <artifactId>image-kit-java</artifactId>
+            <version>3.5.0</version>
+        </dependency>
+
         <!-- Spring MVC -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
