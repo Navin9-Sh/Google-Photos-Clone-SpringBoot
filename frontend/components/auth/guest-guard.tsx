@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/hooks/use-auth";
+import { useAuthStore } from "@/stores/auth-store";
 
 type GuestGuardProps = {
     children: React.ReactNode;
@@ -11,9 +12,26 @@ type GuestGuardProps = {
 };
 
 /** For login/register pages - redirect away if already logged in. */
-export function GuestGuard({ children, redirectTo = "/photos" }: GuestGuardProps) {
+export function GuestGuard({ children, redirectTo = "/" }: GuestGuardProps) {
     const router = useRouter();
     const { isReady, isLoggedIn } = useAuth();
+    const setReady = useAuthStore((state) => state.setReady);
+
+    // Persist may finish before mount - subscribe first, then check.
+    useEffect(() => {
+        const persistApi = useAuthStore.persist;
+
+        if (!persistApi) {
+            setReady();
+            return;
+        }
+
+        const unsub = persistApi.onFinishHydration(() => setReady());
+
+        if (persistApi.hasHydrated()) setReady();
+
+        return unsub;
+    }, [setReady]);
 
     useEffect(() => {
         if (isReady && isLoggedIn) {

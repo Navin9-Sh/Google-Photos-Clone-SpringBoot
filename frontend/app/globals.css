@@ -1,20 +1,112 @@
 @import "tailwindcss";
 
+/* Make Tailwind's dark: classes respond to next-themes' .dark class */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  --card: #ffffff;
+  --card-foreground: #171717;
+
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+
+  --ring: #2563eb;
+
+  --destructive: #ef4444;
 }
 
+/* Explicit light theme */
+.light {
+  --background: #ffffff;
+  --foreground: #171717;
+
+  --card: #ffffff;
+  --card-foreground: #171717;
+
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+
+  --ring: #2563eb;
+
+  --destructive: #ef4444;
+}
+
+/* Dark theme */
 .dark {
-  --background: #0a0a0a;
+  --background: #0b0b0d;
   --foreground: #ededed;
+
+  --card: #18181a;
+  --card-foreground: #ededed;
+
+  --primary: #315be8;
+  --primary-foreground: #ffffff;
+
+  --secondary: #27272a;
+  --secondary-foreground: #fafafa;
+
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+
+  --border: #303033;
+  --input: #303033;
+
+  --ring: #315be8;
+
+  --destructive: #ef4444;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+
+  --color-ring: var(--ring);
+
+  --color-destructive: var(--destructive);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  min-height: 100%;
 }
 
 body {

@@ -11,7 +11,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                     <ModeToggle />
                 </div>
 
-                <div className="mb-8 text-center">
+                <div className="mb-10 pt-8 text-center">
                     <Link href="/" className="text-2xl font-semibold tracking-tight text-foreground">
                         Google Photos Clone
                     </Link>
@@ -20,8 +20,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                     </p>
                 </div>
 
-                <Card className="w-full max-w-md border-border/60 bg-card/80 backdrop-blur-sm">
-                    <CardContent className="pt-6">{children}</CardContent>
+                <Card className="w-full max-w-md rounded-4xl border-border/60 bg-card/80 shadow-2xl backdrop-blur-sm">                    <CardContent className="pt-6">{children}</CardContent>
                 </Card>
             </div>
         </GuestGuard>

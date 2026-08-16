@@ -1,9 +1,17 @@
-import React from 'react'
+import { AuthForm } from "@/components/auth/auth-form";
+import { CardDescription, CardTitle } from "@/components/ui/card";
 
-const LoginPage = () => {
+export default function LoginPage() {
     return (
-        <div>LoginPage</div>
-    )
-}
+        <div className="space-y-6">
+            <div className="space-y-1">
+                <CardTitle className="text-lg">Sign in</CardTitle>
+                <CardDescription>
+                    Enter your credentials to continue
+                </CardDescription>
+            </div>
 
-export default LoginPage
+            <AuthForm mode="login" />
+        </div>
+    );
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import type { AuthResponse, User } from "@/lib/api";
 
 /**
@@ -17,6 +17,13 @@ type AuthState = {
     isReady: boolean;
     setAuth: (auth: AuthResponse) => void;
     clearAuth: () => void;
+    setReady: () => void;
+};
+
+const noopStorage = {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {},
 };
 
 export const useAuthStore = create<AuthState>()(
@@ -27,7 +34,7 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             isReady: false,
 
-            setAuth: (auth: AuthResponse) =>
+            setAuth: (auth) =>
                 set({
                     accessToken: auth.accessToken,
                     refreshToken: auth.refreshToken,
@@ -40,17 +47,25 @@ export const useAuthStore = create<AuthState>()(
                     refreshToken: null,
                     user: null,
                 }),
+
+            setReady: () => set({ isReady: true }),
         }),
         {
             name: "gp-auth",
-            // Only save these fields (not isReady)
+
+            // Noop on the server so persist still hydrates and sets isReady
+            storage: createJSONStorage(() =>
+                typeof window === "undefined" ? noopStorage : localStorage
+            ),
+
             partialize: (state) => ({
                 accessToken: state.accessToken,
                 refreshToken: state.refreshToken,
                 user: state.user,
             }),
-            onRehydrateStorage: () => () => {
-                useAuthStore.setState({ isReady: true });
+
+            onRehydrateStorage: () => (state) => {
+                state?.setReady();
             },
         },
     ),
