@@ -151,6 +151,8 @@ public class AlbumService {
     public void deleteAlbum(User user, UUID albumId) {
         Album album = getOwnedAlbum(user, albumId);
 
+        albumPhotoRepository.deleteByAlbumId(albumId);
+
         albumRepository.delete(album);
     }
 

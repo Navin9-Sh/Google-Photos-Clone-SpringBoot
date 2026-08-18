@@ -90,9 +90,19 @@ public class ImageKitService {
                             .build()
             );
 
+
         } catch (ImageKitException ex) {
+            String message = ex.getMessage();
+
+            if (message != null &&
+                    message.contains("404")) {
+                // File is already gone from ImageKit.
+                // Continue deleting the local database record.
+                return;
+            }
+
             throw new ImageKitUploadException(
-                    "ImageKit delete failed: " + ex.getMessage(),
+                    "ImageKit delete failed: " + message,
                     ex
             );
         }
@@ -119,19 +129,102 @@ public class ImageKitService {
         }
     }
 
-    public String buildAiTransformUrl(String sourceUrl, String transformChain) {
+    public String buildAiTransformUrl(
+            String sourceUrl,
+            String transformChain
+    ) {
         if (sourceUrl == null || sourceUrl.isBlank()) {
-            throw new BadRequestException("Source URL is required");
+            throw new BadRequestException(
+                    "Source URL is required"
+            );
         }
 
-        if (transformChain == null || transformChain.isBlank()) {
+        if (transformChain == null
+                || transformChain.isBlank()) {
             return sourceUrl;
         }
 
-        String baseUrl = stripQuery(sourceUrl);
-        String cacheBuster = "v=" + System.currentTimeMillis();
+        String separator =
+                sourceUrl.contains("?")
+                        ? "&"
+                        : "?";
 
-        return baseUrl + "?tr=" + transformChain + "&" + cacheBuster;
+        return sourceUrl
+                + separator
+                + "tr="
+                + transformChain;
+    }
+
+    public void validateAiTransform(
+            String transformUrl
+    ) {
+        try {
+            HttpRequest request =
+                    HttpRequest.newBuilder()
+                            .uri(
+                                    URI.create(
+                                            transformUrl
+                                    )
+                            )
+                            .timeout(
+                                    Duration.ofSeconds(30)
+                            )
+                            .GET()
+                            .build();
+
+            HttpResponse<byte[]> response =
+                    httpClient.send(
+                            request,
+                            HttpResponse.BodyHandlers
+                                    .ofByteArray()
+                    );
+
+            String intermediate =
+                    response.headers()
+                            .firstValue(
+                                    "is-intermediate-response"
+                            )
+                            .orElse(
+                                    "false"
+                            );
+
+            if ("true".equalsIgnoreCase(
+                    intermediate
+            )) {
+                return;
+            }
+
+            if (response.statusCode() >= 400) {
+
+                String ikError =
+                        response.headers()
+                                .firstValue(
+                                        "ik-error"
+                                )
+                                .orElse(
+                                        "Unknown ImageKit error"
+                                );
+
+                throw new ImageKitUploadException(
+                        ikError
+                );
+            }
+
+        } catch (
+                IOException |
+                InterruptedException ex
+        ) {
+
+            if (ex instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+
+            throw new ImageKitUploadException(
+                    "Failed to validate AI transformation: "
+                            + ex.getMessage(),
+                    ex
+            );
+        }
     }
 
     public byte[] downloadTransformedImage(String transformUrl) {
@@ -159,12 +252,36 @@ public class ImageKitService {
                 }
 
                 if (response.statusCode() >= 400) {
-                    throw new ImageKitUploadException(
-                            "Failed to download transformed image (HTTP "
-                                    + response.statusCode() + ")"
-                    );
-                }
 
+                    String ikError = response.headers()
+                            .firstValue("ik-error")
+                            .orElse("No ik-error header returned");
+
+                    String contentType = response.headers()
+                            .firstValue("Content-Type")
+                            .orElse("unknown");
+
+                    ImageKitUploadException exception =
+                            new ImageKitUploadException(
+                                    "ImageKit returned HTTP "
+                                            + response.statusCode()
+                                            + " | ik-error: "
+                                            + ikError
+                                            + " | content-type: "
+                                            + contentType
+                            );
+
+                    // Permanent errors should fail immediately.
+                    if (response.statusCode() == 400
+                            || response.statusCode() == 401
+                            || response.statusCode() == 403
+                            || response.statusCode() == 404) {
+
+                        throw exception;
+                    }
+
+                    throw exception;
+                }
                 byte[] body = response.body();
 
                 if (body == null || body.length == 0) {
@@ -186,8 +303,8 @@ public class ImageKitService {
                 return body;
 
             } catch (ImageKitUploadException ex) {
-                lastError = ex;
-                sleepBeforeRetry();
+                throw ex;
+
 
             } catch (IOException | InterruptedException ex) {
                 if (ex instanceof InterruptedException) {
@@ -209,6 +326,7 @@ public class ImageKitService {
                 "Timed out waiting for AI transformation to finish"
         );
     }
+
 
     public String buildThumbnailUrl(String filePath) {
         if (filePath == null || filePath.isBlank()) {
@@ -248,11 +366,6 @@ public class ImageKitService {
 
     public static String userFolder(UUID userId){
         return "/users" + userId;
-    }
-
-    private String stripQuery(String url) {
-        int queryIndex = url.indexOf('?');
-        return queryIndex > 0 ? url.substring(0, queryIndex) : url;
     }
 
     private void sleepBeforeRetry() {

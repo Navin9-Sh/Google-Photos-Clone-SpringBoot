@@ -100,6 +100,18 @@ public class PhotoController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/photos/trash")
+    public ResponseEntity<Void> movePhotosToTrash(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody BulkPhotoActionRequest request
+    ) {
+        User user = userService.getByEmail(userDetails.getUsername());
+
+        photoService.movePhotosToTrash(user, request.photoIds());
+
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/photos/restore")
     public ResponseEntity<Void> restorePhotos(
             @AuthenticationPrincipal UserDetails userDetails,

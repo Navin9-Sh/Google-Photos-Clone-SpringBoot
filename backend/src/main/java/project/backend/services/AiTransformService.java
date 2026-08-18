@@ -7,12 +7,12 @@ import project.backend.dto.AiTransformPreviewResponse;
 import project.backend.dto.AiTransformRequest;
 import project.backend.dto.PhotoResponse;
 import project.backend.exception.BadRequestException;
+import project.backend.exception.ImageKitUploadException;
 import project.backend.exception.ResourceNotFoundException;
 import project.backend.repository.PhotoRepository;
-import project.backend.services.ImageKitService;
-import project.backend.services.PhotoService;
 
-
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.UUID;
 
 @Service
@@ -37,15 +37,43 @@ public class AiTransformService {
             UUID photoId,
             AiTransformRequest request
     ) {
-        Photo photo = getActivePhoto(user, photoId);
+        Photo photo = getActivePhoto(
+                user,
+                photoId
+        );
 
-        String transformChain = buildTransformChain(request, photo);
+        String transformChain =
+                buildTransformChain(
+                        request
+                );
 
         String previewUrl =
                 imageKitService.buildAiTransformUrl(
                         photo.getUrl(),
                         transformChain
                 );
+
+        try {
+            imageKitService.validateAiTransform(
+                    previewUrl
+            );
+        } catch (ImageKitUploadException ex) {
+
+            String message = ex.getMessage() == null
+                    ? ""
+                    : ex.getMessage();
+
+            if (message.contains("ELIMIT")) {
+                throw new BadRequestException(
+                        "AI usage limit reached. Please try again later."
+                );
+            }
+
+            throw new BadRequestException(
+                    "Failed to generate AI preview: "
+                            + message
+            );
+        }
 
         return new AiTransformPreviewResponse(
                 previewUrl,
@@ -61,7 +89,8 @@ public class AiTransformService {
     ) {
         Photo photo = getActivePhoto(user, photoId);
 
-        String transformChain = buildTransformChain(request, photo);
+        String transformChain =
+                buildTransformChain(request);
 
         String transformUrl =
                 imageKitService.buildAiTransformUrl(
@@ -70,7 +99,9 @@ public class AiTransformService {
                 );
 
         byte[] transformedBytes =
-                imageKitService.downloadTransformedImage(transformUrl);
+                imageKitService.downloadTransformedImage(
+                        transformUrl
+                );
 
         String suffix =
                 request.type()
@@ -104,7 +135,10 @@ public class AiTransformService {
             UUID photoId
     ) {
         return photoRepository
-                .findByIdAndUserId(photoId, user.getId())
+                .findByIdAndUserId(
+                        photoId,
+                        user.getId()
+                )
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Photo not found"
@@ -127,10 +161,15 @@ public class AiTransformService {
         }
 
         String base =
-                originalFileName.substring(0, dotIndex);
+                originalFileName.substring(
+                        0,
+                        dotIndex
+                );
 
         String extension =
-                originalFileName.substring(dotIndex);
+                originalFileName.substring(
+                        dotIndex
+                );
 
         return base
                 + "-ai-"
@@ -139,8 +178,7 @@ public class AiTransformService {
     }
 
     private String buildTransformChain(
-            AiTransformRequest request,
-            Photo photo
+            AiTransformRequest request
     ) {
         return switch (request.type()) {
 
@@ -148,13 +186,15 @@ public class AiTransformService {
                     "e-bgremove";
 
             case BACKGROUND_AND_SHADOW ->
-                    "e-bgremove:e-dropshadow";
+                    "e-removedotbg:e-dropshadow";
 
             case CHANGE_BACKGROUND -> {
                 requirePrompt(request);
 
-                yield "e-background-prompt-"
-                        + urlEncodePrompt(request.prompt());
+                yield "e-changebg-prompte-"
+                        + encodePrompt(
+                        request.prompt()
+                );
             }
 
             case GENERATIVE_FILL -> {
@@ -173,16 +213,19 @@ public class AiTransformService {
                 if (request.prompt() != null
                         && !request.prompt().isBlank()) {
 
-                    yield "bg-genfill,w-" + width
+                    yield "w-" + width
                             + ",h-" + height
                             + ",cm-pad_resize"
-                            + ",e-bg-genfill-prompt-"
-                            + urlEncodePrompt(request.prompt());
+                            + ",bg-genfill-prompte-"
+                            + encodePrompt(
+                            request.prompt()
+                    );
                 }
 
-                yield "bg-genfill,w-" + width
+                yield "w-" + width
                         + ",h-" + height
-                        + ",cm-pad_resize";
+                        + ",cm-pad_resize"
+                        + ",bg-genfill";
             }
 
             case SMART_CROP -> {
@@ -221,10 +264,26 @@ public class AiTransformService {
             case AI_EDIT -> {
                 requirePrompt(request);
 
-                yield "e-edit-prompt-"
-                        + urlEncodePrompt(request.prompt());
+                yield "e-edit-prompte-"
+                        + encodePrompt(
+                        request.prompt()
+                );
             }
         };
+    }
+
+    private String encodePrompt(
+            String prompt
+    ) {
+        return Base64
+                .getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(
+                        prompt.trim()
+                                .getBytes(
+                                        StandardCharsets.UTF_8
+                                )
+                );
     }
 
     private void requirePrompt(
@@ -260,7 +319,8 @@ public class AiTransformService {
                 || value > 4096) {
 
             throw new BadRequestException(
-                    name + " must be between 64 and 4096 pixels"
+                    name
+                            + " must be between 64 and 4096 pixels"
             );
         }
 
@@ -273,16 +333,9 @@ public class AiTransformService {
         return focusObject
                 .trim()
                 .toLowerCase()
-                .replaceAll("[^a-z0-9_-]", "");
-    }
-
-    private String urlEncodePrompt(
-            String prompt
-    ) {
-        return java.net.URLEncoder
-                .encode(
-                        prompt.trim(),
-                        java.nio.charset.StandardCharsets.UTF_8
+                .replaceAll(
+                        "[^a-z0-9_-]",
+                        ""
                 );
     }
 }

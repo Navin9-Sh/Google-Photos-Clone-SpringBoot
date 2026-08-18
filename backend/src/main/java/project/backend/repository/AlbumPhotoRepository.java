@@ -40,6 +40,8 @@ public interface AlbumPhotoRepository extends JpaRepository<AlbumPhoto, UUID> {
             UUID photoId
     );
 
+    void deleteByAlbumId(UUID albumId);
+
     @Query("""
         SELECT COALESCE(MAX(ap.sortOrder), 0) FROM AlbumPhoto ap
         WHERE ap.album.id = :albumId
