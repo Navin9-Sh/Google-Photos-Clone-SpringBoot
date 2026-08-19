@@ -44,11 +44,11 @@ export function SidebarNav({ user, onNavigate }: SidebarNavProps) {
 
                     <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-sidebar-foreground">
-                            Google Photos
+                            PixelVault
                         </p>
 
                         <p className="text-xs text-muted-foreground">
-                            Clone
+                            Gallery
                         </p>
                     </div>
                 </div>

@@ -58,7 +58,7 @@ export function AppShell({ children }: AppShellProps) {
 
                         <div className="min-w-0">
                             <p className="truncate text-sm font-medium text-foreground">
-                                Google Photos
+                                PixelVault
                             </p>
 
                             {user && (
