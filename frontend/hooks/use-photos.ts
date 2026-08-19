@@ -18,15 +18,22 @@ export function usePhotos(
     page = 0,
     size = 24,
 ) {
-    const userId = useAuthStore((state) => state.user?.id);
+    const user = useAuthStore((state) => state.user);
+    const accessToken = useAuthStore((state) => state.accessToken);
+    const isReady = useAuthStore((state) => state.isReady);
 
     return useQuery({
-        queryKey: photoKeys.list(userId ?? "anonymous", status, page, size),
+        queryKey: photoKeys.list(
+            user?.id ?? "anonymous",
+            status,
+            page,
+            size,
+        ),
 
         queryFn: () =>
             api.listPhotos(status, page, size),
 
-        enabled: !!userId,
+        enabled: isReady && !!accessToken && !!user,
 
         staleTime: 30 * 1000,
     });
@@ -68,6 +75,10 @@ export function useUploadPhotos() {
 
         onSuccess: async () => {
             await queryClient.invalidateQueries({
+                queryKey: photoKeys.all,
+            });
+
+            await queryClient.refetchQueries({
                 queryKey: photoKeys.all,
             });
         },
