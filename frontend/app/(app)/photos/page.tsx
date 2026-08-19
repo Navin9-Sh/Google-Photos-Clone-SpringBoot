@@ -905,7 +905,7 @@ export default function PhotosPage() {
             {isError && (
                 <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6 text-center">
                     <p className="font-medium text-destructive">
-                        Failed to load photos.
+                        Your session has expired. Please log in again.
                     </p>
 
                     <p className="mt-1 text-sm text-muted-foreground">

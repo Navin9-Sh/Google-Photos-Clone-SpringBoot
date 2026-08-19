@@ -3,6 +3,9 @@ import { useAuthStore } from "@/stores/auth-store";
 const API_URL =
     process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
 
+const SESSION_EXPIRED_MESSAGE =
+    "Your session has expired. Please log in again.";
+
 export type User = {
     id: string;
     email: string;
@@ -177,6 +180,14 @@ async function request<T>(
                 },
             );
 
+            if (retryResponse.status === 401) {
+                useAuthStore.getState().clearAuth();
+
+                throw new Error(
+                    SESSION_EXPIRED_MESSAGE
+                );
+            }
+
             if (!retryResponse.ok) {
                 let message = "Request failed";
 
@@ -200,6 +211,10 @@ async function request<T>(
 
             return retryResponse.json();
         }
+
+        throw new Error(
+            SESSION_EXPIRED_MESSAGE
+        );
     }
 
     if (!response.ok) {

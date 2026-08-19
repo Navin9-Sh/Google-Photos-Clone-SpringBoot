@@ -1,21 +1,28 @@
 # IntelliJ IDEA
 .idea/
 *.iml
+.vscode/
 
 # Java / Gradle
 .gradle/
 build/
 target/
+*.class
 
 # Node / Next.js
 node_modules/
 .next/
 out/
+frontend/.env.local
+frontend/node_modules/
+frontend/.next/
 
 # Environment variables
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
 
 # OS
 .DS_Store
