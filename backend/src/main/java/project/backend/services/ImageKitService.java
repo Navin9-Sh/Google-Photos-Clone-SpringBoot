@@ -158,73 +158,111 @@ public class ImageKitService {
     public void validateAiTransform(
             String transformUrl
     ) {
-        try {
-            HttpRequest request =
-                    HttpRequest.newBuilder()
-                            .uri(
-                                    URI.create(
-                                            transformUrl
-                                    )
-                            )
-                            .timeout(
-                                    Duration.ofSeconds(30)
-                            )
-                            .GET()
-                            .build();
+        ImageKitUploadException lastError = null;
 
-            HttpResponse<byte[]> response =
-                    httpClient.send(
-                            request,
-                            HttpResponse.BodyHandlers
-                                    .ofByteArray()
-                    );
+        for (
+                int attempt = 1;
+                attempt <= AI_DOWNLOAD_MAX_ATTEMPTS;
+                attempt++
+        ) {
+            try {
+                HttpRequest request =
+                        HttpRequest.newBuilder()
+                                .uri(
+                                        URI.create(
+                                                transformUrl
+                                        )
+                                )
+                                .timeout(
+                                        Duration.ofSeconds(90)
+                                )
+                                .GET()
+                                .build();
 
-            String intermediate =
-                    response.headers()
-                            .firstValue(
-                                    "is-intermediate-response"
-                            )
-                            .orElse(
-                                    "false"
-                            );
+                HttpResponse<byte[]> response =
+                        httpClient.send(
+                                request,
+                                HttpResponse.BodyHandlers
+                                        .ofByteArray()
+                        );
 
-            if ("true".equalsIgnoreCase(
-                    intermediate
-            )) {
-                return;
-            }
-
-            if (response.statusCode() >= 400) {
-
-                String ikError =
+                String intermediate =
                         response.headers()
                                 .firstValue(
-                                        "ik-error"
+                                        "is-intermediate-response"
                                 )
-                                .orElse(
-                                        "Unknown ImageKit error"
-                                );
+                                .orElse("false");
 
-                throw new ImageKitUploadException(
-                        ikError
-                );
+                if ("true".equalsIgnoreCase(
+                        intermediate
+                )) {
+                    sleepBeforeRetry();
+                    continue;
+                }
+
+                if (response.statusCode() >= 400) {
+
+                    String ikError =
+                            response.headers()
+                                    .firstValue(
+                                            "ik-error"
+                                    )
+                                    .orElse(
+                                            "Unknown ImageKit error"
+                                    );
+
+                    throw new ImageKitUploadException(
+                            ikError
+                    );
+                }
+
+                String contentType =
+                        response.headers()
+                                .firstValue(
+                                        "Content-Type"
+                                )
+                                .orElse("");
+
+                if (!contentType.startsWith(
+                        "image/"
+                )) {
+                    throw new ImageKitUploadException(
+                            "ImageKit did not return a valid image"
+                    );
+                }
+
+                return;
+
+            } catch (ImageKitUploadException ex) {
+                throw ex;
+
+            } catch (
+                    IOException |
+                    InterruptedException ex
+            ) {
+
+                if (ex instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+
+                lastError =
+                        new ImageKitUploadException(
+                                "Failed to validate AI transformation: "
+                                        + ex.getMessage(),
+                                ex
+                        );
+
+                if (attempt < AI_DOWNLOAD_MAX_ATTEMPTS) {
+                    sleepBeforeRetry();
+                }
             }
-
-        } catch (
-                IOException |
-                InterruptedException ex
-        ) {
-
-            if (ex instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-
-            throw new ImageKitUploadException(
-                    "Failed to validate AI transformation: "
-                            + ex.getMessage(),
-                    ex
-            );
         }
+
+        throw lastError != null
+                ? lastError
+                : new ImageKitUploadException(
+                "Timed out waiting for AI transformation to finish"
+        );
     }
 
     public byte[] downloadTransformedImage(String transformUrl) {

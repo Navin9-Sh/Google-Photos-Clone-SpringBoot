@@ -65,7 +65,7 @@ public class AiTransformService {
 
             if (message.contains("ELIMIT")) {
                 throw new BadRequestException(
-                        "AI usage limit reached. Please try again later."
+                        "AI usage limit reached. Please try again later, or try again with a different ImageKit account."
                 );
             }
 

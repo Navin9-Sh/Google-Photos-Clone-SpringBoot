@@ -121,6 +121,8 @@ export default function PhotoAiPage() {
     const [savedPhoto, setSavedPhoto] =
         useState<Photo | null>(null);
 
+    const [aiErrorMessage, setAiErrorMessage] = useState("");
+
     const selectedFeature =
         AI_FEATURES.find(
             (feature) =>
@@ -151,14 +153,20 @@ export default function PhotoAiPage() {
     };
 
     const handlePreview = () => {
-        if (!photo) {
-            return;
-        }
-
         if (
             needsPrompt &&
             !prompt.trim()
         ) {
+            setAiErrorMessage(
+                "Prompt is required. Please enter a valid prompt."
+            );
+
+            setPreviewUrl(null);
+
+            setTimeout(() => {
+                setAiErrorMessage("");
+            }, 3000);
+
             return;
         }
 
@@ -166,8 +174,25 @@ export default function PhotoAiPage() {
             needsObject &&
             !focusObject.trim()
         ) {
+            setAiErrorMessage(
+                "Object is required. Please enter a valid object."
+            );
+
+            setPreviewUrl(null);
+
+            setTimeout(() => {
+                setAiErrorMessage("");
+            }, 3000);
+
             return;
         }
+
+        if (!photo) {
+            return;
+        }
+
+        setAiErrorMessage("");
+        setPreviewUrl(null);
 
         previewMutation.mutate(
             {
@@ -178,17 +203,14 @@ export default function PhotoAiPage() {
 
                     ...(prompt.trim()
                         ? {
-                            prompt:
-                                prompt.trim(),
+                            prompt: prompt.trim(),
                         }
                         : {}),
 
                     ...(needsDimensions
                         ? {
-                            width:
-                                Number(width),
-                            height:
-                                Number(height),
+                            width: Number(width),
+                            height: Number(height),
                         }
                         : {}),
 
@@ -206,10 +228,24 @@ export default function PhotoAiPage() {
                         result.previewUrl,
                     );
                 },
+
+                onError: (error) => {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "Failed to generate AI preview.";
+
+                    setPreviewUrl(null);
+
+                    setAiErrorMessage(message);
+
+                    setTimeout(() => {
+                        setAiErrorMessage("");
+                    }, 4000);
+                },
             },
         );
     };
-
     const handleSave = () => {
         if (!photo) {
             return;
@@ -493,9 +529,7 @@ export default function PhotoAiPage() {
 
                     <button
                         type="button"
-                        onClick={
-                            handlePreview
-                        }
+                        onClick={handlePreview}
                         disabled={
                             previewMutation.isPending ||
                             applyMutation.isPending
@@ -508,6 +542,14 @@ export default function PhotoAiPage() {
                             ? "Generating..."
                             : "Preview transform"}
                     </button>
+
+                    {/* AI PREVIEW ERROR */}
+
+                    {aiErrorMessage && (
+                        <div className="mt-3 rounded-xl border border-red-500 bg-red-500/10 p-3 text-sm text-red-500">
+                            {aiErrorMessage}
+                        </div>
+                    )}
 
                     {/* Save */}
 

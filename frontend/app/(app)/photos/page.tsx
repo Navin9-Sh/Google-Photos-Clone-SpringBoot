@@ -546,60 +546,23 @@ export default function PhotosPage() {
                 },
             },
             {
-                onSuccess: async (result) => {
-                    try {
-                        const response = await fetch(
-                            result.previewUrl,
-                        );
+                onSuccess: (result) => {
+                    setAiErrorMessage(null);
 
-                        if (!response.ok) {
-                            setAiPreviewUrl(null);
-                            setAiErrorMessage(
-                                "AI preview could not be generated. ImageKit AI usage limit may have been reached. Please try again later.",
-                            );
-                            return;
-                        }
-
-                        const contentType =
-                            response.headers.get(
-                                "content-type",
-                            ) || "";
-
-                        if (
-                            !contentType.startsWith(
-                                "image/",
-                            )
-                        ) {
-                            setAiPreviewUrl(null);
-                            setAiErrorMessage(
-                                "AI preview could not be generated. ImageKit AI usage limit may have been reached. Please try again later.",
-                            );
-                            return;
-                        }
-
-                        setAiPreviewUrl(
-                            result.previewUrl,
-                        );
-
-                    } catch {
-                        setAiPreviewUrl(null);
-
-                        setAiErrorMessage(
-                            "AI preview could not be generated. Please try again later.",
-                        );
-                    }
+                    setAiPreviewUrl(
+                        result.previewUrl,
+                    );
                 },
 
                 onError: (error) => {
-                    console.error("AI PREVIEW ERROR:", error);
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "Failed to generate AI preview.";
 
                     setAiPreviewUrl(null);
 
-                    setAiErrorMessage(
-                        error instanceof Error
-                            ? `ERROR: ${error.message}`
-                            : "ERROR: Preview request failed"
-                    );
+                    setAiErrorMessage(message);
                 },
             },
         );
@@ -1658,11 +1621,11 @@ export default function PhotosPage() {
                                         <button
                                             key={feature.type}
                                             type="button"
-                                            onClick={() =>
-                                                handleAiTransform(
-                                                    feature.type,
-                                                )
-                                            }
+                                            onClick={() => {
+                                                setAiTransformType(feature.type);
+                                                setAiPreviewUrl(null);
+                                                setAiErrorMessage(null);
+                                            }}
                                             disabled={
                                                 previewAiMutation.isPending ||
                                                 applyAiMutation.isPending
@@ -1746,6 +1709,19 @@ export default function PhotosPage() {
                                     />
                                 )}
 
+                                {aiTransformType && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleAiTransform(aiTransformType)}
+                                        disabled={previewAiMutation.isPending}
+                                        className="mt-4 w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {previewAiMutation.isPending
+                                            ? "Generating AI Preview..."
+                                            : "Generate AI Preview"}
+                                    </button>
+                                )}
+
                                 {/* Preview */}
                                 {previewAiMutation.isPending && (
                                     <div className="mt-5 rounded-xl bg-white/5 p-6 text-center">
@@ -1766,6 +1742,7 @@ export default function PhotosPage() {
                                     </div>
                                 )}
 
+                                {/* ERROR MESSAGE */}
                                 {aiErrorMessage && (
                                     <div className="mt-4 rounded-xl border border-red-500 bg-red-500/10 p-3 text-sm text-red-400">
                                         {aiErrorMessage}
@@ -1783,13 +1760,11 @@ export default function PhotosPage() {
                                                 src={aiPreviewUrl}
                                                 alt="AI preview"
                                                 className="max-h-[45vh] w-full object-contain"
-                                                onError={(event) => {
-                                                    event.currentTarget.style.display = "none";
-
+                                                onError={() => {
                                                     setAiPreviewUrl(null);
 
                                                     setAiErrorMessage(
-                                                        "AI preview could not be generated. ImageKit AI usage limit may have been reached. Please try again later."
+                                                        "AI preview failed to load. Please try again later.",
                                                     );
                                                 }}
                                             />
@@ -1798,9 +1773,7 @@ export default function PhotosPage() {
                                         <button
                                             type="button"
                                             onClick={handleApplyAiTransform}
-                                            disabled={
-                                                applyAiMutation.isPending
-                                            }
+                                            disabled={applyAiMutation.isPending}
                                             className="mt-4 w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             {applyAiMutation.isPending
@@ -1809,6 +1782,7 @@ export default function PhotosPage() {
                                         </button>
                                     </div>
                                 )}
+
                             </div>
                         )}
 
