@@ -24,6 +24,20 @@ public class GlobalExceptionHandler {
                 );
     }
 
+    @ExceptionHandler(ResourceConflictException.class)
+    public ResponseEntity<Map<String, String>> handleConflict(
+            ResourceConflictException ex
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(
+                        Map.of(
+                                "message",
+                                ex.getMessage()
+                        )
+                );
+    }
+
     @ExceptionHandler(ImageKitUploadException.class)
     public ResponseEntity<Map<String, String>> handleImageKitError(
             ImageKitUploadException ex
