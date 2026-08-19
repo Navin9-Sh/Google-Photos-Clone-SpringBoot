@@ -14,12 +14,14 @@ export const photoKeys = {
     all: ["photos"] as const,
 
     list: (
+        userId: string,
         status: string,
         page: number,
         size: number,
     ) =>
         [
             ...photoKeys.all,
+            userId,
             "list",
             status,
             page,

@@ -12,16 +12,21 @@ import {
 } from "@/lib/api";
 import { photoKeys } from "@/lib/validations/query-keys";
 
+import { useAuthStore } from "@/stores/auth-store";
 export function usePhotos(
     status: PhotoStatus = "ACTIVE",
     page = 0,
     size = 24,
 ) {
+    const userId = useAuthStore((state) => state.user?.id);
+
     return useQuery({
-        queryKey: photoKeys.list(status, page, size),
+        queryKey: photoKeys.list(userId ?? "anonymous", status, page, size),
 
         queryFn: () =>
             api.listPhotos(status, page, size),
+
+        enabled: !!userId,
 
         staleTime: 30 * 1000,
     });
